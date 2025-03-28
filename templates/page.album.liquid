@@ -1,0 +1,255 @@
+{% comment %}
+Este código muestra todas las prendas de la tienda en una cuadrícula.
+Las compradas aparecerán a color y las no compradas en blanco y negro.
+{% endcomment %}
+
+<style>
+  /* Contenedor principal */
+  .album-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Grid de productos */
+  .album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    text-align: center;
+  }
+
+  .album-item {
+    border: 2px solid #ccc;
+    padding: 10px;
+    border-radius: 8px;
+    transition: border-color 0.3s ease-in-out;
+    cursor: pointer;
+  }
+
+  .album-item:hover {
+    border-color: black;
+  }
+
+  .album-item img {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .disabled {
+    pointer-events: auto;
+  }
+
+  /* Barras de progreso */
+  .progress-container {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+  }
+
+  .progress-bar {
+    height: 20px;
+    background-color: #4caf50;
+    text-align: center;
+    line-height: 20px;
+    color: white;
+    font-weight: bold;
+    transition: width 0.5s ease-in-out;
+  }
+
+  /* Estilos para nombres de productos */
+  .product-name {
+    font-size: 14px;
+    color: black;
+  }
+
+  .product-name.missing {
+    color: gray;
+    text-decoration: line-through;
+  }
+
+  /* Popup de bienvenida */
+  .popup-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .popup-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    text-align: center;
+    position: relative;
+  }
+
+  .close-popup {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+</style>
+
+<div class="album-container">
+  <h1>MI ÁLBUM DE PRENDAS</h1>
+
+  <!-- Barra de progreso total (COMENTADA) -->
+  {%
+    comment
+  %}
+  {% assign total_products = 0 %}
+  {% assign total_purchased = 0 %}
+
+  {% for collection in collections %}
+    {% assign total_products = total_products | plus: collection.products.size %}
+
+    {% for product in collection.products %}
+      {% assign purchased = false %}
+
+      {% if customer %}
+        {% for order in customer.orders %}
+          {% for line_item in order.line_items %}
+            {% if line_item.product_id == product.id %}
+              {% assign purchased = true %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      {% endif %}
+
+      {% if purchased %}
+        {% assign total_purchased = total_purchased | plus: 1 %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+
+  {% if total_products > 0 %}
+    {% assign total_progress = total_purchased | times: 100 | divided_by: total_products %}
+  {% else %}
+    {% assign total_progress = 0 %}
+  {% endif %}
+
+  <div class="progress-container">
+    <div class="progress-bar" style="width: {{ total_progress }}%;">{{ total_progress }}%</div>
+  </div>
+  {%
+    endcomment
+  %}
+
+  {% for collection in collections %}
+    {% assign collection_total = collection.products.size %}
+    {% assign collection_purchased = 0 %}
+
+    {% for product in collection.products %}
+      {% assign purchased = false %}
+      {% assign purchase_count = 0 %}
+
+      {% if customer %}
+        {% for order in customer.orders %}
+          {% for line_item in order.line_items %}
+            {% if line_item.product_id == product.id %}
+              {% assign purchased = true %}
+              {% assign purchase_count = purchase_count | plus: line_item.quantity %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      {% endif %}
+
+      {% if purchased %}
+        {% assign collection_purchased = collection_purchased | plus: 1 %}
+      {% endif %}
+    {% endfor %}
+
+    <!-- Barra de progreso de la colección -->
+    {% assign collection_progress = collection_purchased | times: 100 | divided_by: collection_total %}
+    <h2>{{ collection.title }}</h2>
+    <div class="progress-container">
+      <div class="progress-bar" style="width: {{ collection_progress }}%;">{{ collection_progress }}%</div>
+    </div>
+
+    <div class="album-grid">
+      {% for product in collection.products %}
+        {% assign purchased = false %}
+        {% assign purchase_count = 0 %}
+
+        {% if customer %}
+          {% for order in customer.orders %}
+            {% for line_item in order.line_items %}
+              {% if line_item.product_id == product.id %}
+                {% assign purchased = true %}
+                {% assign purchase_count = purchase_count | plus: line_item.quantity %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        {% endif %}
+
+        <div class="album-item {% unless purchased %}disabled{% endunless %}" 
+             onclick="{% if purchased %}openPopup('{{ product.title }}', '{{ product.featured_image.src | img_url: 'medium' }}', {{ purchase_count }}){% else %}window.location.href='{{ product.url }}'{% endif %}">
+          
+          {% if purchased %}
+            <img src="{{ product.featured_image.src | img_url: 'medium' }}" alt="{{ product.title }}">
+          {% else %}
+            <img src="{{ product.featured_image.src | img_url: 'medium' }}" alt="{{ product.title }}" style="filter: grayscale(100%); opacity: 0.5;">
+          {% endif %}
+
+          <p class="product-name {% unless purchased %}missing{% endunless %}">{{ product.title }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>
+
+<!-- POPUP AL CARGAR LA PÁGINA -->
+<div id="welcome-popup" class="popup-container">
+  <div class="popup-content">
+    <span class="close-popup" onclick="closeWelcomePopup()">&times;</span>
+    <h2>¡Bienvenido a tu Álbum!</h2>
+    <p>Aquí podrás ver todas las prendas que has comprado y las que te faltan por conseguir. ¡Colecciónalas todas!</p>
+  </div>
+</div>
+
+<!-- POPUP AL HACER CLIC EN UN PRODUCTO COMPRADO -->
+<div id="product-popup" class="popup-container">
+  <div class="popup-content">
+    <span class="close-popup" onclick="closePopup()">&times;</span>
+    <h2 id="popup-title"></h2>
+    <img id="popup-image" src="" alt="" style="width: 100%; border-radius: 10px;">
+    <p><strong>Veces compradas:</strong> <span id="purchase-count"></span></p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("welcome-popup").style.display = "flex";
+  });
+
+  function closeWelcomePopup() {
+    document.getElementById("welcome-popup").style.display = "none";
+  }
+
+  function openPopup(title, imageUrl, count) {
+    document.getElementById("popup-title").innerText = title;
+    document.getElementById("popup-image").src = imageUrl;
+    document.getElementById("purchase-count").innerText = count;
+    document.getElementById("product-popup").style.display = "flex";
+  }
+
+  function closePopup() {
+    document.getElementById("product-popup").style.display = "none";
+  }
+</script>
+
+
+
+
