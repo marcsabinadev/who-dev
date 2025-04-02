@@ -225,7 +225,6 @@ Las compradas aparecerán a color y las no compradas en blanco y negro.
     <span class="close-popup" onclick="closePopup()">&times;</span>
     <h2 id="popup-title"></h2>
     <img id="popup-image" src="" alt="" style="width: 100%; border-radius: 10px;">
-    <p><strong>Veces compradas:</strong> <span id="purchase-count"></span></p>
   </div>
 </div>
 
@@ -241,7 +240,6 @@ Las compradas aparecerán a color y las no compradas en blanco y negro.
   function openPopup(title, imageUrl, count) {
     document.getElementById("popup-title").innerText = title;
     document.getElementById("popup-image").src = imageUrl;
-    document.getElementById("purchase-count").innerText = count;
     document.getElementById("product-popup").style.display = "flex";
   }
 
